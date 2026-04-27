@@ -1,12 +1,7 @@
-import Phaser from 'phaser';
-
 export class MovementSystem {
   private readonly speed = 140;
 
-  public move(
-    player: Phaser.Physics.Arcade.Sprite,
-    cursors: Phaser.Types.Input.Keyboard.CursorKeys
-  ): void {
+  public move(player: any, cursors: any): void {
     player.setVelocity(0);
 
     if (cursors.left?.isDown) {
