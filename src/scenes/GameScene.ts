@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { BLOCKED_TILES, MAP_LAYOUT, TILE_SIZE, TILE_TYPES, TileType } from '../data/mapData';
-import { PLAYER_MONSTER, getRandomWildMonster } from '../data/monsterData';
+import { PLAYER_BATTLE_STATE, getRandomWildMonster } from '../data/monsterData';
 import { MovementInputState, MovementSystem } from '../systems/MovementSystem';
 
 type VirtualDirection = 'up' | 'down' | 'left' | 'right';
@@ -284,7 +284,7 @@ export class GameScene extends Phaser.Scene {
     const wildMonster = getRandomWildMonster();
     this.scene.start('BattleScene', {
       wildMonster,
-      playerMonster: PLAYER_MONSTER
+      playerState: PLAYER_BATTLE_STATE
     });
   }
 
