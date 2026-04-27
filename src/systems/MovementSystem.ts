@@ -1,18 +1,25 @@
+export type MovementInputState = {
+  left: boolean;
+  right: boolean;
+  up: boolean;
+  down: boolean;
+};
+
 export class MovementSystem {
   private readonly speed = 140;
 
-  public move(player: any, cursors: any): void {
+  public move(player: any, input: MovementInputState): void {
     player.setVelocity(0);
 
-    if (cursors.left?.isDown) {
+    if (input.left) {
       player.setVelocityX(-this.speed);
-    } else if (cursors.right?.isDown) {
+    } else if (input.right) {
       player.setVelocityX(this.speed);
     }
 
-    if (cursors.up?.isDown) {
+    if (input.up) {
       player.setVelocityY(-this.speed);
-    } else if (cursors.down?.isDown) {
+    } else if (input.down) {
       player.setVelocityY(this.speed);
     }
 
