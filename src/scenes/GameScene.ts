@@ -4,6 +4,8 @@ import { BLOCKED_TILES, MAP_LAYOUT, TILE_SIZE, TILE_TYPES, TileType } from '../d
 import { MovementInputState, MovementSystem } from '../systems/MovementSystem';
 
 type VirtualDirection = 'up' | 'down' | 'left' | 'right';
+const HERO_TEXTURE_SIZE = 48;
+const NPC_TEXTURE_SIZE = 48;
 
 type VirtualPadState = Record<VirtualDirection, boolean>;
 
@@ -98,10 +100,7 @@ export class GameScene extends Phaser.Scene {
     graphics.fillRect(13, 23, 6, 7);
     graphics.generateTexture('lantern', TILE_SIZE, TILE_SIZE);
 
-    graphics.clear();
-    graphics.fillStyle(0xfdd835, 1);
-    graphics.fillRect(6, 6, 20, 20);
-    graphics.generateTexture('npc', TILE_SIZE, TILE_SIZE);
+    this.generateNpcTexture(graphics);
 
     this.generateHeroTextures(graphics);
     this.generatePortraitTexture(graphics);
@@ -483,7 +482,7 @@ export class GameScene extends Phaser.Scene {
         const key = `player-${direction}-${state}`;
         graphics.clear();
         this.drawHeroFrame(graphics, direction, state);
-        graphics.generateTexture(key, TILE_SIZE, TILE_SIZE);
+        graphics.generateTexture(key, HERO_TEXTURE_SIZE, HERO_TEXTURE_SIZE);
       }
     }
   }
@@ -494,75 +493,122 @@ export class GameScene extends Phaser.Scene {
     state: 'idle' | 'walk-1' | 'walk-2'
   ): void {
     const skin = 0xf4c8a0;
-    const hair = 0x1d1d21;
-    const headband = 0xe8f0ff;
+    const skinShadow = 0xd9a982;
+    const hair = 0x22222a;
+    const headbandLight = 0xe7efff;
+    const headbandDark = 0xc0d0ff;
     const robeDark = 0x2e4e86;
-    const robeLight = 0x49689f;
-    const legColor = 0x2f333f;
+    const robeMid = 0x3f63a3;
+    const robeLight = 0x6485bf;
+    const cloth = 0xeff3fa;
+    const shoe = 0x1f2330;
 
-    const drawFoot = (x: number, y: number) => {
-      graphics.fillStyle(legColor, 1);
-      graphics.fillRect(x, y, 6, 4);
-    };
-
-    graphics.fillStyle(robeDark, 1);
-    graphics.fillRect(10, 13, 12, 2);
+    const leftStep = state === 'walk-1' ? -2 : state === 'walk-2' ? 2 : 0;
+    const rightStep = state === 'walk-1' ? 2 : state === 'walk-2' ? -2 : 0;
+    const sideBias = direction === 'left' ? -2 : direction === 'right' ? 2 : 0;
 
     graphics.fillStyle(hair, 1);
-    graphics.fillRect(10, 8, 12, 7);
-    graphics.fillStyle(headband, 1);
-    graphics.fillRect(10, 11, 12, 2);
-    graphics.fillStyle(skin, 1);
-    graphics.fillRect(11, 13, 10, 7);
+    graphics.fillRect(14 + sideBias, 6, 20, 10);
+
+    graphics.fillStyle(headbandLight, 1);
+    graphics.fillRect(14 + sideBias, 12, 20, 3);
+    graphics.fillStyle(headbandDark, 1);
+    graphics.fillRect(15 + sideBias, 13, 18, 1);
 
     if (direction === 'up') {
       graphics.fillStyle(hair, 1);
-      graphics.fillRect(11, 14, 10, 6);
+      graphics.fillRect(15 + sideBias, 15, 18, 9);
+    } else {
+      graphics.fillStyle(skin, 1);
+      graphics.fillRect(15 + sideBias, 15, 18, 10);
+      graphics.fillStyle(skinShadow, 1);
+      graphics.fillRect(15 + sideBias, 23, 18, 2);
+
+      if (direction === 'down') {
+        graphics.fillStyle(hair, 1);
+        graphics.fillRect(17 + sideBias, 17, 3, 3);
+        graphics.fillRect(28 + sideBias, 17, 3, 3);
+        graphics.fillStyle(0x84473c, 1);
+        graphics.fillRect(22 + sideBias, 21, 4, 1);
+      }
     }
 
     graphics.fillStyle(robeDark, 1);
-    graphics.fillRect(9, 20, 14, 8);
+    graphics.fillRect(12 + sideBias, 25, 24, 14);
+    graphics.fillStyle(robeMid, 1);
+    graphics.fillRect(14 + sideBias, 26, 20, 12);
     graphics.fillStyle(robeLight, 1);
-    graphics.fillRect(10, 21, 12, 7);
+    graphics.fillRect(18 + sideBias, 27, 12, 10);
+    graphics.fillStyle(cloth, 1);
+    graphics.fillRect(22 + sideBias, 25, 4, 10);
 
-    if (direction === 'left') {
-      graphics.fillStyle(robeLight, 1);
-      graphics.fillRect(8, 20, 3, 7);
-    }
-
-    if (direction === 'right') {
-      graphics.fillStyle(robeLight, 1);
-      graphics.fillRect(21, 20, 3, 7);
-    }
-
-    if (direction === 'left') {
+    if (direction === 'left' || direction === 'right') {
+      const armX = direction === 'left' ? 10 : 35;
       graphics.fillStyle(skin, 1);
-      graphics.fillRect(8, 22, 2, 4);
-    } else if (direction === 'right') {
-      graphics.fillStyle(skin, 1);
-      graphics.fillRect(22, 22, 2, 4);
+      graphics.fillRect(armX + sideBias, 28, 3, 7);
+      graphics.fillStyle(robeLight, 1);
+      graphics.fillRect(armX + sideBias + (direction === 'left' ? 1 : -1), 26, 2, 8);
     } else {
       graphics.fillStyle(skin, 1);
-      graphics.fillRect(8, 22, 2, 4);
-      graphics.fillRect(22, 22, 2, 4);
+      graphics.fillRect(10 + sideBias, 29, 3, 7);
+      graphics.fillRect(35 + sideBias, 29, 3, 7);
+      graphics.fillStyle(robeLight, 1);
+      graphics.fillRect(12 + sideBias, 27, 2, 8);
+      graphics.fillRect(34 + sideBias, 27, 2, 8);
     }
 
-    const leftFootY = state === 'walk-1' ? 28 : state === 'walk-2' ? 26 : 27;
-    const rightFootY = state === 'walk-1' ? 26 : state === 'walk-2' ? 28 : 27;
+    const leftLegX = 17 + sideBias;
+    const rightLegX = 25 + sideBias;
+    const leftLegY = 38 + leftStep;
+    const rightLegY = 38 + rightStep;
 
-    if (direction === 'up') {
-      drawFoot(12, leftFootY);
-      drawFoot(18, rightFootY);
-    } else if (direction === 'left') {
-      drawFoot(10, leftFootY);
-      drawFoot(16, rightFootY);
-    } else if (direction === 'right') {
-      drawFoot(10, rightFootY);
-      drawFoot(16, leftFootY);
-    } else {
-      drawFoot(12, rightFootY);
-      drawFoot(18, leftFootY);
-    }
+    graphics.fillStyle(robeDark, 1);
+    graphics.fillRect(leftLegX, leftLegY, 6, 4);
+    graphics.fillRect(rightLegX, rightLegY, 6, 4);
+    graphics.fillStyle(shoe, 1);
+    graphics.fillRect(leftLegX, leftLegY + 4, 7, 3);
+    graphics.fillRect(rightLegX, rightLegY + 4, 7, 3);
+  }
+
+  private generateNpcTexture(graphics: any): void {
+    const skin = 0xf0c39c;
+    const hair = 0x3a281f;
+    const robeDark = 0x6f4c88;
+    const robeLight = 0x8a63aa;
+    const apron = 0xd9d1ec;
+
+    graphics.clear();
+    graphics.fillStyle(hair, 1);
+    graphics.fillRect(14, 6, 20, 11);
+    graphics.fillStyle(0xe6f0ff, 1);
+    graphics.fillRect(14, 12, 20, 3);
+
+    graphics.fillStyle(skin, 1);
+    graphics.fillRect(15, 15, 18, 10);
+    graphics.fillStyle(0x6d3e34, 1);
+    graphics.fillRect(19, 18, 2, 2);
+    graphics.fillRect(27, 18, 2, 2);
+    graphics.fillRect(22, 22, 4, 1);
+
+    graphics.fillStyle(robeDark, 1);
+    graphics.fillRect(12, 25, 24, 13);
+    graphics.fillStyle(robeLight, 1);
+    graphics.fillRect(14, 26, 20, 12);
+    graphics.fillStyle(apron, 1);
+    graphics.fillRect(20, 27, 8, 10);
+
+    graphics.fillStyle(skin, 1);
+    graphics.fillRect(10, 28, 3, 7);
+    graphics.fillRect(35, 28, 3, 7);
+
+    graphics.fillStyle(0x2d3240, 1);
+    graphics.fillRect(17, 38, 6, 4);
+    graphics.fillRect(25, 38, 6, 4);
+    graphics.fillStyle(0x1c212e, 1);
+    graphics.fillRect(17, 42, 7, 3);
+    graphics.fillRect(25, 42, 7, 3);
+
+    graphics.generateTexture('npc', NPC_TEXTURE_SIZE, NPC_TEXTURE_SIZE);
   }
 
   private generatePortraitTexture(graphics: any): void {
