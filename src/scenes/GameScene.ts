@@ -5,7 +5,7 @@ import { MovementSystem } from '../systems/MovementSystem';
 
 export class GameScene extends Phaser.Scene {
   private player?: Player;
-  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
+  private cursors?: any;
   private readonly movementSystem = new MovementSystem();
 
   constructor() {
@@ -54,11 +54,13 @@ export class GameScene extends Phaser.Scene {
 
     this.cursors = this.input.keyboard?.createCursorKeys();
 
-    this.add.text(12, 10, 'Boyz Mini RPG', {
-      color: '#ffffff',
-      fontFamily: 'Arial',
-      fontSize: '18px'
-    }).setScrollFactor(0);
+    this.add
+      .text(12, 10, 'Boyz Mini RPG', {
+        color: '#ffffff',
+        fontFamily: 'Arial',
+        fontSize: '18px'
+      })
+      .setScrollFactor(0);
   }
 
   update(): void {
