@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { BLOCKED_TILES, MAP_LAYOUT, TILE_SIZE, TILE_TYPES, TileType } from '../data/mapData';
+import { PLAYER_MONSTER, getRandomWildMonster } from '../data/monsterData';
 import { MovementInputState, MovementSystem } from '../systems/MovementSystem';
 
 type VirtualDirection = 'up' | 'down' | 'left' | 'right';
@@ -44,6 +45,7 @@ export class GameScene extends Phaser.Scene {
   private dialogText?: any;
   private dialogPortrait?: any;
   private dialogOpen = false;
+  private previousBushTileKey?: string;
 
   constructor() {
     super('GameScene');
@@ -246,6 +248,44 @@ export class GameScene extends Phaser.Scene {
 
     this.movementSystem.move(this.player, movementInput);
     this.player.updateAnimationFromMovement();
+    this.tryTriggerWildEncounter(movementInput);
+  }
+
+  private tryTriggerWildEncounter(movementInput: MovementInputState): void {
+    if (!this.player) {
+      return;
+    }
+
+    const isMoving = movementInput.left || movementInput.right || movementInput.up || movementInput.down;
+    if (!isMoving) {
+      return;
+    }
+
+    const tileX = Math.floor(this.player.x / TILE_SIZE);
+    const tileY = Math.floor(this.player.y / TILE_SIZE);
+    const tileType = MAP_LAYOUT[tileY]?.[tileX];
+
+    if (tileType !== TILE_TYPES.BUSH) {
+      this.previousBushTileKey = undefined;
+      return;
+    }
+
+    const tileKey = `${tileX},${tileY}`;
+    if (this.previousBushTileKey === tileKey) {
+      return;
+    }
+    this.previousBushTileKey = tileKey;
+
+    const encounterChance = 0.08;
+    if (Math.random() >= encounterChance) {
+      return;
+    }
+
+    const wildMonster = getRandomWildMonster();
+    this.scene.start('BattleScene', {
+      wildMonster,
+      playerMonster: PLAYER_MONSTER
+    });
   }
 
   private getNearestInteractable(): Interactable | undefined {
