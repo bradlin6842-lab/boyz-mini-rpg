@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { BattleScene } from './scenes/BattleScene';
 import { GameScene } from './scenes/GameScene';
 
 const config: any = {
@@ -15,7 +16,7 @@ const config: any = {
       debug: false
     }
   },
-  scene: [GameScene]
+  scene: [GameScene, BattleScene]
 };
 
 new Phaser.Game(config);
