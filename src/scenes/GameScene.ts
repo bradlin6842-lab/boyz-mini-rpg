@@ -7,6 +7,13 @@ type VirtualDirection = 'up' | 'down' | 'left' | 'right';
 
 type VirtualPadState = Record<VirtualDirection, boolean>;
 
+type Interactable = {
+  id: string;
+  x: number;
+  y: number;
+  message: string;
+};
+
 export class GameScene extends Phaser.Scene {
   private player?: Player;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -16,6 +23,7 @@ export class GameScene extends Phaser.Scene {
     left: Phaser.Input.Keyboard.Key;
     right: Phaser.Input.Keyboard.Key;
   };
+  private interactKey?: Phaser.Input.Keyboard.Key;
   private readonly movementSystem = new MovementSystem();
   private readonly virtualPadState: VirtualPadState = {
     up: false,
@@ -23,6 +31,16 @@ export class GameScene extends Phaser.Scene {
     left: false,
     right: false
   };
+
+  private readonly interactables: Interactable[] = [];
+  private nearestInteractable?: Interactable;
+
+  private interactionHintText?: Phaser.GameObjects.Text;
+  private interactionButton?: Phaser.GameObjects.Rectangle;
+
+  private dialogBackground?: Phaser.GameObjects.Rectangle;
+  private dialogText?: Phaser.GameObjects.Text;
+  private dialogOpen = false;
 
   constructor() {
     super('GameScene');
@@ -109,8 +127,42 @@ export class GameScene extends Phaser.Scene {
           this.physics.add.existing(blocker, true);
           blockers.push(blocker);
         }
+
+        if (tileType === TILE_TYPES.NPC) {
+          this.interactables.push({
+            id: `npc-${x}-${y}`,
+            x: centerX,
+            y: centerY,
+            message: '歡迎來到 Boyz 村，草叢裡聽說有妖怪出沒。'
+          });
+        }
+
+        if (tileType === TILE_TYPES.SIGN) {
+          this.interactables.push({
+            id: `sign-${x}-${y}`,
+            x: centerX,
+            y: centerY,
+            message: '北方是神社，東方是道館。'
+          });
+        }
+
+        if (tileType === TILE_TYPES.SHRINE) {
+          this.interactables.push({
+            id: `shrine-${x}-${y}`,
+            x: centerX,
+            y: centerY,
+            message: '神社散發溫暖的光，目前補血功能尚未開放。'
+          });
+        }
       }
     }
+
+    this.interactables.push({
+      id: 'dojo-entrance',
+      x: TILE_SIZE * 14 + TILE_SIZE / 2,
+      y: TILE_SIZE * 8 + TILE_SIZE / 2,
+      message: '道館大門緊閉，似乎需要先獲得第一隻妖怪。'
+    });
 
     const spawnX = TILE_SIZE * 2;
     const spawnY = TILE_SIZE * 2;
@@ -128,6 +180,8 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.15, 0.15);
 
     this.cursors = this.input.keyboard?.createCursorKeys();
+    this.interactKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
     const wasd = this.input.keyboard?.addKeys('W,S,A,D') as
       | {
           W: Phaser.Input.Keyboard.Key;
@@ -146,6 +200,7 @@ export class GameScene extends Phaser.Scene {
       : undefined;
 
     this.createVirtualDPad();
+    this.createInteractionUi();
 
     this.add
       .text(12, 10, 'Boyz Mini RPG - 戰國小村莊測試圖', {
@@ -162,6 +217,27 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.nearestInteractable = this.getNearestInteractable();
+    const canInteract = Boolean(this.nearestInteractable) && !this.dialogOpen;
+
+    if (this.interactionHintText) {
+      this.interactionHintText.setVisible(canInteract);
+    }
+    if (this.interactionButton) {
+      this.interactionButton.setVisible(canInteract);
+    }
+
+    const pressedInteractKey = Boolean(this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey));
+
+    if (pressedInteractKey) {
+      this.handleInteractionInput();
+    }
+
+    if (this.dialogOpen) {
+      this.player.setVelocity(0, 0);
+      return;
+    }
+
     const movementInput: MovementInputState = {
       left: Boolean(this.cursors.left?.isDown || this.wasdKeys?.left?.isDown || this.virtualPadState.left),
       right: Boolean(this.cursors.right?.isDown || this.wasdKeys?.right?.isDown || this.virtualPadState.right),
@@ -170,6 +246,131 @@ export class GameScene extends Phaser.Scene {
     };
 
     this.movementSystem.move(this.player, movementInput);
+  }
+
+  private getNearestInteractable(): Interactable | undefined {
+    if (!this.player) {
+      return undefined;
+    }
+
+    const interactionDistance = TILE_SIZE * 1.25;
+    const playerX = this.player.x;
+    const playerY = this.player.y;
+
+    let closest: Interactable | undefined;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    for (const interactable of this.interactables) {
+      const distance = Phaser.Math.Distance.Between(playerX, playerY, interactable.x, interactable.y);
+      if (distance <= interactionDistance && distance < closestDistance) {
+        closest = interactable;
+        closestDistance = distance;
+      }
+    }
+
+    return closest;
+  }
+
+  private handleInteractionInput(): void {
+    if (this.dialogOpen) {
+      this.closeDialog();
+      return;
+    }
+
+    if (this.nearestInteractable) {
+      this.openDialog(this.nearestInteractable.message);
+    }
+  }
+
+  private openDialog(message: string): void {
+    this.dialogOpen = true;
+
+    if (this.dialogBackground && this.dialogText) {
+      this.dialogBackground.setVisible(true);
+      this.dialogText.setText(message).setVisible(true);
+    }
+
+    if (this.interactionHintText) {
+      this.interactionHintText.setVisible(false);
+    }
+    if (this.interactionButton) {
+      this.interactionButton.setVisible(false);
+    }
+  }
+
+  private closeDialog(): void {
+    this.dialogOpen = false;
+
+    if (this.dialogBackground && this.dialogText) {
+      this.dialogBackground.setVisible(false);
+      this.dialogText.setVisible(false);
+    }
+  }
+
+  private createInteractionUi(): void {
+    this.interactionHintText = this.add
+      .text(this.scale.width / 2, this.scale.height - 18, '按 E 互動', {
+        color: '#ffffff',
+        fontFamily: 'Arial',
+        fontSize: '20px'
+      })
+      .setOrigin(0.5, 1)
+      .setScrollFactor(0)
+      .setDepth(30)
+      .setVisible(false);
+
+    const buttonWidth = 92;
+    const buttonHeight = 52;
+    this.interactionButton = this.add
+      .rectangle(90, this.scale.height - 44, buttonWidth, buttonHeight, 0x000000, 0.4)
+      .setStrokeStyle(2, 0xffffff, 0.5)
+      .setScrollFactor(0)
+      .setDepth(30)
+      .setInteractive({ useHandCursor: true })
+      .setVisible(false);
+
+    this.add
+      .text(90, this.scale.height - 44, '互動', {
+        color: '#ffffff',
+        fontFamily: 'Arial',
+        fontSize: '22px'
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(31);
+
+    this.interactionButton.on('pointerdown', () => {
+      this.handleInteractionInput();
+    });
+
+    this.dialogBackground = this.add
+      .rectangle(this.scale.width / 2, this.scale.height - 82, this.scale.width - 40, 130, 0x000000, 0.86)
+      .setStrokeStyle(2, 0xffffff, 0.7)
+      .setScrollFactor(0)
+      .setDepth(40)
+      .setInteractive({ useHandCursor: true })
+      .setVisible(false);
+
+    this.dialogText = this.add
+      .text(this.scale.width / 2, this.scale.height - 82, '', {
+        color: '#ffffff',
+        fontFamily: 'Arial',
+        fontSize: '20px',
+        align: 'center',
+        wordWrap: { width: this.scale.width - 84, useAdvancedWrap: true }
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(41)
+      .setVisible(false);
+
+    this.dialogBackground.on('pointerdown', () => {
+      this.closeDialog();
+    });
+    this.dialogText.on('pointerdown', () => {
+      this.closeDialog();
+    });
+    this.dialogText.setInteractive({ useHandCursor: true });
   }
 
   private getTextureByTile(tileType: TileType): string {
@@ -244,6 +445,5 @@ export class GameScene extends Phaser.Scene {
 
     button.on('pointerup', releaseDirection);
     button.on('pointerout', releaseDirection);
-    button.on('pointerupoutside', releaseDirection as any);
   }
 }
